@@ -1,8 +1,6 @@
 package succinctBitSet
 
-import (
-	"fmt"
-)
+import ()
 
 const mask1 = word8Bit(0x55)
 const mask2 = word8Bit(0x33)
@@ -23,7 +21,7 @@ type BitSet struct {
 type Table interface {
 	getOffset(popcount int, block uint32) int
 	blockLength() uint32
-	addRow(uint32)
+	addRow(int)
 }
 
 type Block interface {
@@ -37,7 +35,7 @@ type word8Bit uint8
 type classOffsetPair [2]int32
 
 // Count bits set (rank) from the most-significant up to a given
-// position. Shamelessley taken from the excellent
+// position. Shamelessly taken from the excellent
 // graphics.stanford.edu/~seander/bithacks.html
 func (word word8Bit) popCountToBit(rank uint) int {
 	var r word8Bit
@@ -61,7 +59,7 @@ func (word word8Bit) popCountAll() int {
 func New8BitTable() *table8Bit {
 	table := new(table8Bit)
 	for i := range pascalRow8 {
-		table.addRow(uint32(i))
+		table.addRow(i)
 	}
 	return table
 }
@@ -79,8 +77,8 @@ func (table *table8Bit) blockLength() uint32 {
 	return 8
 }
 
-func (table *table8Bit) addRow(i uint32) {
-	table[i] = fixedPopCountBlocks(uint32(table.blockLength()), i)
+func (table *table8Bit) addRow(i int) {
+	table[i] = fixedPopCountBlocks(uint64(table.blockLength()), uint64(i))
 }
 
 func New8BitSet() BitSet {
@@ -105,7 +103,6 @@ func (bitset *BitSet) AddFromBoolChan(bitChan <-chan bool) {
 				buffer = buffer | tmp
 			}
 		} else { //Add the new word to the bit string
-			//fmt.Printf("Adding: %08b\n", buffer)
 			popcount := word8Bit(buffer).popCountAll()
 			offset := bitset.table.getOffset(popcount, uint32(buffer))
 			bitset.addBits(popcount, offset)
@@ -144,50 +141,50 @@ func (bitset *BitSet) addBits(popCountClass, offset int) {
 	}
 }
 
+func (bitset BitSet) getBits(offset, n uint32) uint64 {
+	subIndex := offset % 64
+	// Does the requested bits flow into the next int64set?
+	if (offset%64)+n > 64 {
+		// if so, calculate the number of bits that overflow
+		// Note that we're assuming that you'll never be
+		// reqeusting more than 64 bits.
+		remainder := (offset % 64) + n - 64
+		buffer := bitset.set[offset/64]&((1<<(64-subIndex))-1)<<remainder | bitset.set[offset/64+1]>>(64-remainder)
+		return buffer
+	} else {
+		//Shift 'offset' bits to the right then mask 'n' bits
+		return bitset.set[offset/64] >> (64 - subIndex - n) & ((1 << n) - 1)
+	}
+}
+
 func (bitset *BitSet) Rank(ith uint32) int {
-	var currentInt64 uint64
-	var class uint64
-	targetBlockGlobal := int((ith) / bitset.table.blockLength())
+	targetBlockGlobal := (ith) / bitset.table.blockLength()
 
 	count := 0
-	blockIndex := 0
 	bitIndex := uint32(0)
-	for blockIndex < targetBlockGlobal {
-		fmt.Printf("%d (blockIndex) < %d (targetBlockGlobal)\n", blockIndex, targetBlockGlobal)
-		setIndex := bitIndex / 64
-		currentInt64 = bitset.set[setIndex]
-		for bitIndex-setIndex*64 < 63 && blockIndex < targetBlockGlobal {
-			class = currentInt64 >> (64 - bitset.cLength - bitIndex%64) & ((1 << bitset.cLength) - 1)
-			format := " "
-			for i := 0; i < int(setIndex); i++ {
-				format += "                                                                 "
-			}
-			for i := 0; i < int(bitIndex%64); i++ {
-				format += " "
-			}
-			format += "..."
-			for i := 0; i < int(bitset.binomialLookupLog2[class]); i++ {
-				format += "_"
-			}
-			fmt.Println(format)
-			fmt.Printf("%b\n", bitset.set)
-			bitIndex += bitset.binomialLookupLog2[class] + bitset.cLength
-			count += int(class)
-			blockIndex++
+	for i := uint32(0); i < targetBlockGlobal; i++ {
+		class := bitset.getBits(bitIndex, bitset.cLength)
+		offset := bitset.getBits(bitIndex+bitset.cLength, bitset.binomialLookupLog2[class])
+
+		el := elementZero(class)
+		for i := 0; i < int(offset); i++ {
+			el = nextPerm(el)
 		}
+
+		count += int(class)
+		bitIndex += bitset.cLength + bitset.binomialLookupLog2[class]
 	}
 
-	currentInt64 = bitset.set[bitIndex/64]
-	class = currentInt64 >> (64 - bitset.cLength - bitIndex) & ((1 << bitset.cLength) - 1)
-	offset := currentInt64 >> (64 - bitset.cLength - bitIndex - bitset.binomialLookupLog2[class]) & ((1 << bitset.binomialLookupLog2[class]) - 1)
+	finalClass := bitset.getBits(bitIndex, bitset.cLength)
+	finalOffset := bitset.getBits(bitIndex+bitset.cLength, bitset.binomialLookupLog2[finalClass])
 
-	el := elementZero(uint32(class))
-	for i := 0; i < int(offset); i++ {
+	el := elementZero(finalClass)
+	for i := 0; i < int(finalOffset); i++ {
 		el = nextPerm(el)
 	}
 
 	count += word8Bit(el).popCountToBit(uint(ith % bitset.table.blockLength()))
-	return count
+	return int(count)
 }
 
 // Taken from http://graphics.stanford.edu/~seander/bithacks.html
@@ -198,11 +195,11 @@ func nextPerm(v uint32) uint32 {
 }
 
 // Generates the first permutation with a given number of set bits b.
-func elementZero(c uint32) uint32 {
+func elementZero(c uint64) uint32 {
 	return (1 << c) - 1
 }
 
-func fixedPopCountBlocks(b, p uint32) row {
+func fixedPopCountBlocks(b, p uint64) row {
 	blocks := make([]uint32, pascalRow8[p])
 	if p == 0 {
 		blocks[0] = 0
