@@ -68,7 +68,7 @@ func TestTableCreation(t *testing.T) {
 				So(bitset.Rank(100), ShouldEqual, 42)
 			})
 			Convey("Rank queries larger than the set should not fail", func() {
-				So(bitset.Rank(300), ShouldEqual, 75)
+				So(bitset.Rank(300), ShouldEqual, 76)
 			})
 		})
 	})

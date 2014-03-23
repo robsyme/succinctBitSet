@@ -123,6 +123,9 @@ func (bitset *BitSet) AddFromBoolChan(bitChan <-chan bool) {
 		}
 		i++
 	}
+	popcount := word8Bit(buffer).popCountAll()
+	offset := bitset.table.getOffset(popcount, buffer)
+	bitset.addBits(popcount, offset)
 }
 
 // Add a C, O pair (class, offset) to the bitset
