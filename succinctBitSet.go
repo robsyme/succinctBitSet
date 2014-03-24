@@ -90,7 +90,7 @@ func New() *BitSet {
 	return &BitSet{
 		binomialLookup:     pascalRow8[:],
 		binomialLookupLog2: pascalRow8Log2[:],
-		cLength:            3,
+		cLength:            4,
 		bitcursor:          0,
 		set:                make([]uint64, 1),
 		table:              New8BitTable(),
@@ -102,7 +102,7 @@ func New8BitSet() BitSet {
 	return BitSet{
 		binomialLookup:     pascalRow8[:],
 		binomialLookupLog2: pascalRow8Log2[:],
-		cLength:            3,
+		cLength:            4,
 		bitcursor:          0,
 		set:                make([]uint64, 1),
 		table:              New8BitTable(),
