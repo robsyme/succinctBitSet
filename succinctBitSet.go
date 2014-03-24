@@ -1,6 +1,10 @@
 package succinctBitSet
 
-import ()
+import (
+	"bytes"
+	"fmt"
+	"strconv"
+)
 
 const mask1 = word8Bit(0x55)
 const mask2 = word8Bit(0x33)
@@ -16,6 +20,7 @@ type BitSet struct {
 	set                []uint64
 	table              Table
 	cLength            uint
+	blockCount         uint
 }
 
 type Table interface {
@@ -81,13 +86,13 @@ func (table *table8Bit) addRow(i int) {
 	table[i] = fixedPopCountBlocks(uint64(table.blockLength()), uint64(i))
 }
 
-func New(length int) *BitSet {
+func New() *BitSet {
 	return &BitSet{
 		binomialLookup:     pascalRow8[:],
 		binomialLookupLog2: pascalRow8Log2[:],
 		cLength:            3,
 		bitcursor:          0,
-		set:                make([]uint64, length),
+		set:                make([]uint64, 1),
 		table:              New8BitTable(),
 	}
 
@@ -104,20 +109,50 @@ func New8BitSet() BitSet {
 	}
 }
 
+func (bitset BitSet) String() string {
+	var outBuffer bytes.Buffer
+	outBuffer.WriteRune('[')
+	bitIndex := uint(0)
+	for blockIndex := uint(0); blockIndex < bitset.blockCount; blockIndex++ {
+		outBuffer.Write([]byte("\033[32m"))
+		class := bitset.getBits(bitIndex, bitset.cLength)
+		fmt.Fprintf(&outBuffer, "%03b", class)
+
+		offset := bitset.getBits(bitIndex+bitset.cLength, bitset.binomialLookupLog2[class])
+		outBuffer.Write([]byte("\033[36m"))
+		format := "\033[36m%0" + strconv.FormatInt(int64(bitset.binomialLookupLog2[class]), 10) + "b\033[39m%08b,"
+
+		el := elementZero(class)
+		for i := 0; i < int(offset); i++ {
+			el = nextPerm(el)
+		}
+
+		fmt.Fprintf(&outBuffer, format, offset, el)
+		bitIndex += bitset.cLength + bitset.binomialLookupLog2[class]
+	}
+	outBuffer.Bytes()[outBuffer.Len()-1] = '\033'
+	outBuffer.Write([]byte("[39m"))
+	outBuffer.WriteRune(']')
+	return outBuffer.String()
+}
+
 func (bitset *BitSet) AddFromBoolChan(bitChan <-chan bool) {
 	blockLength := bitset.table.blockLength()
 	buffer := uint(0)
+
 	i := uint(0)
 	for bit := range bitChan {
-		if (i+1)%blockLength != 0 {
+		if i != blockLength {
 			if bit {
-				tmp := uint(1) << (i - 1)
-				buffer = buffer | tmp
+				buffer = (1 << (blockLength - 1 - i)) | buffer
 			}
 		} else { //Add the new word to the bit string
 			popcount := word8Bit(buffer).popCountAll()
 			offset := bitset.table.getOffset(popcount, buffer)
 			bitset.addBits(popcount, offset)
+			fmt.Printf("Adding: %08b\n", buffer)
+			format := "Adding: %2d (%03b, %0" + strconv.FormatInt(int64(bitset.binomialLookupLog2[popcount]), 10) + "b)\n"
+			fmt.Printf(format, buffer, popcount, offset)
 			i = 0
 			buffer = 0
 		}
@@ -130,6 +165,8 @@ func (bitset *BitSet) AddFromBoolChan(bitChan <-chan bool) {
 
 // Add a C, O pair (class, offset) to the bitset
 func (bitset *BitSet) addBits(popCountClass uint, offset int) {
+	format := "Adding: (%03b, %0" + strconv.FormatInt(int64(bitset.binomialLookupLog2[popCountClass]), 10) + "b)\n"
+	fmt.Printf(format, popCountClass, offset)
 	// Append the popcount class bits
 	if bitset.cLength+bitset.bitcursor <= 64 {
 		bitset.set[len(bitset.set)-1] |= uint64(popCountClass) << (64 - bitset.cLength - bitset.bitcursor)
@@ -154,6 +191,8 @@ func (bitset *BitSet) addBits(popCountClass uint, offset int) {
 		bitset.set[len(bitset.set)-1] |= uint64(popCountClass) << (64 - 2*bitSize - bitset.bitcursor + remainder)
 		bitset.bitcursor = remainder
 	}
+	bitset.blockCount++
+	fmt.Println(bitset)
 }
 
 func (bitset BitSet) getBits(offset, n uint) uint64 {
@@ -173,21 +212,15 @@ func (bitset BitSet) getBits(offset, n uint) uint64 {
 }
 
 func (bitset *BitSet) Rank(ith uint) uint {
-	targetBlockGlobal := ith / bitset.table.blockLength()
-
 	count := uint(0)
 	bitIndex := uint(0)
-	for i := uint(0); i < targetBlockGlobal; i++ {
-		class := bitset.getBits(bitIndex, bitset.cLength)
-		offset := bitset.getBits(bitIndex+bitset.cLength, bitset.binomialLookupLog2[class])
+	targetBlockGlobal := ith / bitset.table.blockLength()
 
-		el := elementZero(class)
-		for i := 0; i < int(offset); i++ {
-			el = nextPerm(el)
-		}
-
+	class := bitset.getBits(bitIndex, bitset.cLength)
+	for i := uint(0); i < targetBlockGlobal && class > 0; i++ {
 		count += uint(class)
 		bitIndex += bitset.cLength + bitset.binomialLookupLog2[class]
+		class = bitset.getBits(bitIndex, bitset.cLength)
 	}
 
 	finalClass := bitset.getBits(bitIndex, bitset.cLength)
