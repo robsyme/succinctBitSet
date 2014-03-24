@@ -208,9 +208,14 @@ func (bitset BitSet) getBits(offset, n uint) uint64 {
 func (bitset *BitSet) Rank(ith uint) uint {
 	count := uint(0)
 	bitIndex := uint(0)
-	targetBlockGlobal := ith / bitset.table.blockLength()
+	var targetBlockIndex uint
+	if ith/bitset.table.blockLength() > bitset.blockCount {
+		targetBlockIndex = ith / bitset.table.blockLength()
+	} else {
+		targetBlockIndex = bitset.blockCount
+	}
 
-	for blockIndex := uint(0); blockIndex < bitset.blockCount && blockIndex < targetBlockGlobal; blockIndex++ {
+	for blockIndex := uint(0); blockIndex < targetBlockIndex; blockIndex++ {
 		class := bitset.getBits(bitIndex, bitset.cLength)
 		count += uint(class)
 		bitIndex += bitset.cLength + bitset.binomialLookupLog2[class]
