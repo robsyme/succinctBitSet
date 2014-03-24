@@ -208,8 +208,9 @@ func (bitset BitSet) getBits(offset, n uint) uint64 {
 func (bitset *BitSet) Rank(ith uint) uint {
 	count := uint(0)
 	bitIndex := uint(0)
+
 	var targetBlockIndex uint
-	if ith/bitset.table.blockLength() > bitset.blockCount {
+	if ith/bitset.table.blockLength() < bitset.blockCount {
 		targetBlockIndex = ith / bitset.table.blockLength()
 	} else {
 		targetBlockIndex = bitset.blockCount
