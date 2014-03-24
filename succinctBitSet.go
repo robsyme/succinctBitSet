@@ -210,11 +210,10 @@ func (bitset *BitSet) Rank(ith uint) uint {
 	bitIndex := uint(0)
 	targetBlockGlobal := ith / bitset.table.blockLength()
 
-	class := bitset.getBits(bitIndex, bitset.cLength)
-	for i := uint(0); i < targetBlockGlobal && class > 0; i++ {
+	for blockIndex := uint(0); blockIndex < bitset.blockCount && blockIndex < targetBlockGlobal; blockIndex++ {
+		class := bitset.getBits(bitIndex, bitset.cLength)
 		count += uint(class)
 		bitIndex += bitset.cLength + bitset.binomialLookupLog2[class]
-		class = bitset.getBits(bitIndex, bitset.cLength)
 	}
 
 	finalClass := bitset.getBits(bitIndex, bitset.cLength)
