@@ -57,18 +57,18 @@ func TestTableCreation(t *testing.T) {
 		Convey("It should be able to add bits to the bitset", func() {
 			Convey("It should be answer basic Rank queries", func() {
 				So(bitset.Rank(0), ShouldEqual, 0)
-				So(bitset.Rank(1), ShouldEqual, 0)
-				So(bitset.Rank(2), ShouldEqual, 0)
-				So(bitset.Rank(3), ShouldEqual, 1)
-				So(bitset.Rank(8), ShouldEqual, 4)
-				So(bitset.Rank(9), ShouldEqual, 4)
-				So(bitset.Rank(11), ShouldEqual, 5)
+				So(bitset.Rank(1), ShouldEqual, 1)
+				So(bitset.Rank(2), ShouldEqual, 2)
+				So(bitset.Rank(3), ShouldEqual, 2)
+				So(bitset.Rank(8), ShouldEqual, 6)
+				So(bitset.Rank(9), ShouldEqual, 6)
+				So(bitset.Rank(11), ShouldEqual, 7)
 			})
 			Convey("Rank should cross the 64-bit barrier without problem", func() {
-				So(bitset.Rank(100), ShouldEqual, 42)
+				So(bitset.Rank(100), ShouldEqual, 51)
 			})
 			Convey("Rank queries larger than the set should not fail", func() {
-				So(bitset.Rank(300), ShouldEqual, 75)
+				So(bitset.Rank(300), ShouldEqual, 79)
 			})
 		})
 	})
