@@ -1,7 +1,6 @@
 package succinctBitSet
 
 import (
-	"fmt"
 	. "github.com/smartystreets/goconvey/convey"
 	"math/rand"
 	"testing"
@@ -69,7 +68,6 @@ func TestTableCreation(t *testing.T) {
 				So(bitset.Rank(100), ShouldEqual, 51)
 			})
 			Convey("Rank queries larger than the set should not fail", func() {
-				fmt.Println(&bitset)
 				So(bitset.Rank(300), ShouldEqual, 79)
 			})
 		})

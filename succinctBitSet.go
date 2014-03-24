@@ -150,9 +150,6 @@ func (bitset *BitSet) AddFromBoolChan(bitChan <-chan bool) {
 			popcount := word8Bit(buffer).popCountAll()
 			offset := bitset.table.getOffset(popcount, buffer)
 			bitset.addBits(popcount, offset)
-			fmt.Printf("Adding: %08b\n", buffer)
-			format := "Adding: %2d (%03b, %0" + strconv.FormatInt(int64(bitset.binomialLookupLog2[popcount]), 10) + "b)\n"
-			fmt.Printf(format, buffer, popcount, offset)
 			i = 0
 			buffer = 0
 		}
@@ -165,8 +162,6 @@ func (bitset *BitSet) AddFromBoolChan(bitChan <-chan bool) {
 
 // Add a C, O pair (class, offset) to the bitset
 func (bitset *BitSet) addBits(popCountClass uint, offset int) {
-	format := "Adding: (%03b, %0" + strconv.FormatInt(int64(bitset.binomialLookupLog2[popCountClass]), 10) + "b)\n"
-	fmt.Printf(format, popCountClass, offset)
 	// Append the popcount class bits
 	if bitset.cLength+bitset.bitcursor <= 64 {
 		bitset.set[len(bitset.set)-1] |= uint64(popCountClass) << (64 - bitset.cLength - bitset.bitcursor)
@@ -192,7 +187,6 @@ func (bitset *BitSet) addBits(popCountClass uint, offset int) {
 		bitset.bitcursor = remainder
 	}
 	bitset.blockCount++
-	fmt.Println(bitset)
 }
 
 func (bitset BitSet) getBits(offset, n uint) uint64 {
