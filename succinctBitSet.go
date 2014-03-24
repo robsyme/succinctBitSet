@@ -142,15 +142,14 @@ func (bitset *BitSet) AddFromBoolChan(bitChan <-chan bool) {
 
 	i := uint(0)
 	for bit := range bitChan {
-		if i != blockLength {
-			if bit {
-				buffer = (1 << (blockLength - 1 - i)) | buffer
-			}
-		} else { //Add the new word to the bit string
+		if bit {
+			buffer = (1 << (blockLength - i%blockLength - 1)) | buffer
+		}
+
+		if (i+1)%blockLength == 0 {
 			popcount := word8Bit(buffer).popCountAll()
 			offset := bitset.table.getOffset(popcount, buffer)
 			bitset.addBits(popcount, offset)
-			i = 0
 			buffer = 0
 		}
 		i++
