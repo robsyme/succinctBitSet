@@ -177,7 +177,7 @@ func TestTableCreation(t *testing.T) {
 		So(bitset.RecoverAsString(), ShouldStartWith, input)
 	})
 
-	Convey("Given a bitset with 96 0s then 96 1s", t, func() {
+	Convey("Given a bitset with 64 0s then 64 1s", t, func() {
 		input := "00000000000000000000000000000000000000000000000000000000000000001111111111111111111111111111111111111111111111111111111111111111"
 		bitset := New()
 		bits := make(chan bool)
