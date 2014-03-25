@@ -1,7 +1,6 @@
 package succinctBitSet
 
 import (
-	"fmt"
 	. "github.com/smartystreets/goconvey/convey"
 	"math/rand"
 	"testing"
@@ -39,7 +38,6 @@ func TestTableCreation(t *testing.T) {
 		})
 
 		Convey("It should take a channel of boolean bits", func() {
-			j := 0
 			sum := 0
 			wordCount := 20
 			bits := make(chan bool, 8*wordCount)
@@ -52,8 +50,6 @@ func TestTableCreation(t *testing.T) {
 					} else {
 						bits <- false
 					}
-					j++
-					//fmt.Printf("%d\t%d\n", j, sum)
 				}
 				close(bits)
 			}()
@@ -71,13 +67,9 @@ func TestTableCreation(t *testing.T) {
 				So(bitset.Rank(11), ShouldEqual, 7)
 			})
 			Convey("Rank should cross the 64-bit barrier without problem", func() {
-				fmt.Println("Crossing 64-bit barrier")
-				fmt.Println(bitset)
 				So(bitset.Rank(100), ShouldEqual, 57)
 			})
 			Convey("Rank queries larger than the set should not fail", func() {
-				fmt.Println("Large rank query")
-				fmt.Println(bitset)
 				So(bitset.Rank(300), ShouldEqual, 90)
 			})
 		})
