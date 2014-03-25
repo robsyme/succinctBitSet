@@ -65,10 +65,10 @@ func TestTableCreation(t *testing.T) {
 				So(bitset.Rank(11), ShouldEqual, 7)
 			})
 			Convey("Rank should cross the 64-bit barrier without problem", func() {
-				So(bitset.Rank(100), ShouldEqual, 51)
+				So(bitset.Rank(100), ShouldEqual, 57)
 			})
 			Convey("Rank queries larger than the set should not fail", func() {
-				So(bitset.Rank(300), ShouldEqual, 79)
+				So(bitset.Rank(300), ShouldEqual, 90)
 			})
 		})
 	})
@@ -102,5 +102,76 @@ func TestTableCreation(t *testing.T) {
 			So(w.popCountToBit(8), ShouldEqual, 8)
 			So(w.popCountToBit(9), ShouldEqual, 8)
 		})
+	})
+
+	Convey("A blank 8-bit bitset should be encoded and decoded correctly", t, func() {
+		input := "00000000"
+		bitset := New8BitSet()
+		bits := make(chan bool)
+		go func() {
+			for _, c := range input {
+				if c == '1' {
+					bits <- true
+				} else {
+					bits <- false
+				}
+			}
+			close(bits)
+		}()
+		bitset.AddFromBoolChan(bits)
+		So(bitset.RecoverAsString(), ShouldStartWith, input)
+	})
+
+	Convey("The bitset 000000001 should be encoded and decoded correctly", t, func() {
+		input := "000000001"
+		bitset := New8BitSet()
+		bits := make(chan bool)
+		go func() {
+			for _, c := range input {
+				if c == '1' {
+					bits <- true
+				} else {
+					bits <- false
+				}
+			}
+			close(bits)
+		}()
+		bitset.AddFromBoolChan(bits)
+		So(bitset.RecoverAsString(), ShouldStartWith, input)
+	})
+
+	Convey("Should not fail when setting popCount up to 64-bit border", t, func() {
+		input := "1111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111101"
+		bitset := New8BitSet()
+		bits := make(chan bool)
+		go func() {
+			for _, c := range input {
+				if c == '1' {
+					bits <- true
+				} else {
+					bits <- false
+				}
+			}
+			close(bits)
+		}()
+		bitset.AddFromBoolChan(bits)
+		So(bitset.RecoverAsString(), ShouldStartWith, input)
+	})
+	Convey("Should not fail when setting offset up to 64-bit border", t, func() {
+		input := "11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111011111111"
+		bitset := New8BitSet()
+		bits := make(chan bool)
+		go func() {
+			for _, c := range input {
+				if c == '1' {
+					bits <- true
+				} else {
+					bits <- false
+				}
+			}
+			close(bits)
+		}()
+		bitset.AddFromBoolChan(bits)
+		So(bitset.RecoverAsString(), ShouldStartWith, input)
 	})
 }
