@@ -8,7 +8,7 @@ import (
 
 func TestTableCreation(t *testing.T) {
 	Convey("Given a basic BitSet with block length 8", t, func() {
-		bitset := New8BitSet()
+		bitset := New()
 		Convey("It should not be nil", func() {
 			So(bitset, ShouldNotBeNil)
 		})
@@ -106,7 +106,7 @@ func TestTableCreation(t *testing.T) {
 
 	Convey("A blank 8-bit bitset should be encoded and decoded correctly", t, func() {
 		input := "00000000"
-		bitset := New8BitSet()
+		bitset := New()
 		bits := make(chan bool)
 		go func() {
 			for _, c := range input {
@@ -124,7 +124,7 @@ func TestTableCreation(t *testing.T) {
 
 	Convey("The bitset 000000001 should be encoded and decoded correctly", t, func() {
 		input := "000000001"
-		bitset := New8BitSet()
+		bitset := New()
 		bits := make(chan bool)
 		go func() {
 			for _, c := range input {
@@ -142,7 +142,7 @@ func TestTableCreation(t *testing.T) {
 
 	Convey("Should not fail when setting popCount up to 64-bit border", t, func() {
 		input := "1111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111101"
-		bitset := New8BitSet()
+		bitset := New()
 		bits := make(chan bool)
 		go func() {
 			for _, c := range input {
@@ -159,7 +159,7 @@ func TestTableCreation(t *testing.T) {
 	})
 	Convey("Should not fail when setting offset up to 64-bit border", t, func() {
 		input := "11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111011111111"
-		bitset := New8BitSet()
+		bitset := New()
 		bits := make(chan bool)
 		go func() {
 			for _, c := range input {

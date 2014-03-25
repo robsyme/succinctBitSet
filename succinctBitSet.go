@@ -22,6 +22,7 @@ type BitSet struct {
 	cLength            uint64
 	blockCount         uint
 	superBlockSize     uint
+	superBlocks        []superBlock
 }
 
 type Table interface {
@@ -102,20 +103,9 @@ func New() *BitSet {
 		set:                make([]uint64, 1),
 		table:              New8BitTable(),
 		superBlockSize:     8,
+		superBlocks:        make([]superBlock, 0),
 	}
 
-}
-
-func New8BitSet() BitSet {
-	return BitSet{
-		binomialLookup:     pascalRow8[:],
-		binomialLookupLog2: pascalRow8Log2[:],
-		cLength:            4,
-		bitcursor:          0,
-		set:                make([]uint64, 1),
-		table:              New8BitTable(),
-		superBlockSize:     8,
-	}
 }
 
 func (bitset BitSet) String() string {
@@ -245,6 +235,10 @@ func (bitset *BitSet) addBits(popCountClass uint, offset int) {
 		bitset.bitcursor = 0
 	}
 	bitset.blockCount++
+
+	if bitset.blockCount%bitset.superBlockSize == 0 {
+
+	}
 }
 
 func (bitset BitSet) getBits(offset, n uint64) uint64 {
