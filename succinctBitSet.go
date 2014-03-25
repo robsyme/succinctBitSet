@@ -22,6 +22,7 @@ type BitSet struct {
 	cLength            uint64
 	blockCount         uint
 	superBlockSize     uint
+	bitSum             uint
 	superBlocks        []superBlock
 }
 
@@ -42,8 +43,7 @@ type word8Bit uint8
 type classOffsetPair [2]int32
 
 type superBlock struct {
-	set     *uint64
-	offset  uint
+	offset  uint64
 	rankSum uint
 }
 
@@ -104,8 +104,8 @@ func New() *BitSet {
 		table:              New8BitTable(),
 		superBlockSize:     8,
 		superBlocks:        make([]superBlock, 0),
+		bitSum:             0,
 	}
-
 }
 
 func (bitset BitSet) String() string {
@@ -115,7 +115,8 @@ func (bitset BitSet) String() string {
 	for blockIndex := uint(0); blockIndex < bitset.blockCount; blockIndex++ {
 		outBuffer.Write([]byte("\033[32m"))
 		class := bitset.getBits(bitIndex, uint64(bitset.cLength))
-		fmt.Fprintf(&outBuffer, "%03b", class)
+		fmt.Fprintf(&outBuffer, "%d", class)
+		//fmt.Fprintf(&outBuffer, "%04b", class)
 
 		offset := bitset.getBits(bitIndex+bitset.cLength, bitset.binomialLookupLog2[class])
 		outBuffer.Write([]byte("\033[36m"))
@@ -182,6 +183,8 @@ func (bitset *BitSet) PrintSet() {
 	for i := 0; i < len(bitset.set)-1; i++ {
 		fmt.Printf("%064b", bitset.set[i])
 	}
+
+	// Write the rest of the bits in white
 	finalSet := bitset.set[len(bitset.set)-1]
 	if bitset.bitcursor == 0 {
 		fmt.Printf("\033[39m")
@@ -191,7 +194,6 @@ func (bitset *BitSet) PrintSet() {
 		fmt.Printf(format.String(), finalSet>>(64-bitset.bitcursor))
 	}
 
-	// Write the rest of the bits in white
 	if bitset.bitcursor >= 64 {
 		fmt.Printf("  %d\n", bitset.bitcursor)
 	} else {
@@ -217,6 +219,7 @@ func (bitset *BitSet) addBits(popCountClass uint, offset int) {
 		bitset.set = append(bitset.set, 0)
 		bitset.bitcursor = 0
 	}
+	bitset.bitSum += popCountClass
 
 	// Append the offset bits
 	bitSize := bitset.binomialLookupLog2[popCountClass]
@@ -237,7 +240,7 @@ func (bitset *BitSet) addBits(popCountClass uint, offset int) {
 	bitset.blockCount++
 
 	if bitset.blockCount%bitset.superBlockSize == 0 {
-
+		bitset.superBlocks = append(bitset.superBlocks, superBlock{offset: uint64((len(bitset.set)-1)*64) + bitset.bitcursor, rankSum: bitset.bitSum})
 	}
 }
 
@@ -259,6 +262,7 @@ func (bitset *BitSet) Rank(ith uint) uint {
 	count := uint(0)
 	bitIndex := uint64(0)
 
+	// Which block contains our bit of interest?
 	var targetBlockIndex uint
 	if ith/bitset.table.blockLength() < bitset.blockCount {
 		targetBlockIndex = ith / bitset.table.blockLength()
@@ -266,7 +270,15 @@ func (bitset *BitSet) Rank(ith uint) uint {
 		targetBlockIndex = bitset.blockCount
 	}
 
-	for blockIndex := uint(0); blockIndex < targetBlockIndex; blockIndex++ {
+	//Which superblock precedes our block of interest?
+	superBlockIndex := targetBlockIndex / bitset.superBlockSize
+	if superBlockIndex > 0 {
+		superBlock := bitset.superBlocks[superBlockIndex-1]
+		count = superBlock.rankSum
+		bitIndex += superBlock.offset
+	}
+
+	for blockIndex := uint(0); blockIndex < targetBlockIndex-superBlockIndex*bitset.superBlockSize; blockIndex++ {
 		class := bitset.getBits(bitIndex, bitset.cLength)
 		count += uint(class)
 		bitIndex += bitset.cLength + bitset.binomialLookupLog2[class]
