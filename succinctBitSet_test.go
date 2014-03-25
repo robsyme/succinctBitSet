@@ -17,12 +17,12 @@ func TestTableCreation(t *testing.T) {
 			So(len(bitset.set), ShouldEqual, 1)
 		})
 
+		Convey("which has a block length of 8 bits", func() {
+			So(bitset.blockLength, ShouldEqual, 8)
+		})
+
 		Convey("It should have a table", func() {
 			table := bitset.table
-
-			Convey("which has a block length of 8 bits", func() {
-				So(table.blockLength(), ShouldEqual, uint32(8))
-			})
 
 			Convey("which can calculate the offset for a given bitset", func() {
 				So(table.getOffset(0, 0), ShouldEqual, 0)

@@ -18,34 +18,23 @@ type BitSet struct {
 	binomialLookupLog2 []uint64
 	bitcursor          uint64
 	set                []uint64
-	table              Table
+	table              *table8Bit
 	cLength            uint64
 	blockCount         uint
 	superBlockSize     uint
 	bitSum             uint
 	superBlocks        []superBlock
+	blockLength        uint
 }
-
-type Table interface {
-	getOffset(popcount, block uint) int
-	blockLength() uint
-	addRow(int)
-}
-
-type Block interface {
-	popCountToBit(int) uint
-}
-
-type table8Bit [9]row
-type row []uint
-type row8Bit []uint
-type word8Bit uint8
-type classOffsetPair [2]int32
 
 type superBlock struct {
 	offset  uint64
 	rankSum uint
 }
+
+type table8Bit [9]row
+type row []uint
+type word8Bit uint8
 
 // Count bits set (rank) from the most-significant up to a given
 // position. Shamelessly taken from the excellent
@@ -86,12 +75,8 @@ func (table table8Bit) getOffset(popcount uint, block uint) int {
 	return -1
 }
 
-func (table *table8Bit) blockLength() uint {
-	return 8
-}
-
 func (table *table8Bit) addRow(i int) {
-	table[i] = fixedPopCountBlocks(uint64(table.blockLength()), uint64(i))
+	table[i] = fixedPopCountBlocks(uint64(8), uint64(i))
 }
 
 func New() *BitSet {
@@ -105,6 +90,7 @@ func New() *BitSet {
 		superBlockSize:     8,
 		superBlocks:        make([]superBlock, 0),
 		bitSum:             0,
+		blockLength:        8,
 	}
 }
 
@@ -155,7 +141,7 @@ func (bitset *BitSet) RecoverAsString() string {
 }
 
 func (bitset *BitSet) AddFromBoolChan(bitChan <-chan bool) {
-	blockLength := bitset.table.blockLength()
+	blockLength := bitset.blockLength
 	buffer := uint(0)
 
 	i := uint(0)
@@ -264,8 +250,8 @@ func (bitset *BitSet) Rank(ith uint) uint {
 
 	// Which block contains our bit of interest?
 	var targetBlockIndex uint
-	if ith/bitset.table.blockLength() < bitset.blockCount {
-		targetBlockIndex = ith / bitset.table.blockLength()
+	if ith/bitset.blockLength < bitset.blockCount {
+		targetBlockIndex = ith / bitset.blockLength
 	} else {
 		targetBlockIndex = bitset.blockCount
 	}
@@ -292,7 +278,7 @@ func (bitset *BitSet) Rank(ith uint) uint {
 		el = nextPerm(el)
 	}
 
-	count += word8Bit(el).popCountToBit(uint(ith % bitset.table.blockLength()))
+	count += word8Bit(el).popCountToBit(uint(ith % bitset.blockLength))
 	return count
 }
 
